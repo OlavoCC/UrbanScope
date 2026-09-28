@@ -1,0 +1,110 @@
+# ============================================================
+# UrbanScope -- .gitignore (.NET WebApi + Python FastAPI)
+# ============================================================
+
+# ------------------------------------------------------------
+# 1. MODELOS DE IA (grandes demais pro Git -- copiar na mao)
+# ------------------------------------------------------------
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+*.weights
+
+# ------------------------------------------------------------
+# 2. .NET / ASP.NET CORE (WebApi)
+# ------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+
+# Visual Studio / VS Code / Rider
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+_ReSharper*/
+*.DotSettings.user
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+project.lock.json
+project.fragment.lock.json
+
+# Publish
+publish/
+*.Publish.xml
+*.pubxml
+*.publishproj
+
+# ------------------------------------------------------------
+# 3. PYTHON / FASTAPI (YoloService)
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.env.venv/
+env/
+ENV/
+
+# Ambiente e segredos
+.env
+.env.local
+.env.*.local
+
+# ------------------------------------------------------------
+# 4. ARQUIVOS DE TESTE (gerados por curl -o durante testes)
+# ------------------------------------------------------------
+/test*.json
+/e2e*.json
+*_response.json
+
+# ------------------------------------------------------------
+# 5. LOGS
+# ------------------------------------------------------------
+*.log
+logs/
+log/
+
+# ------------------------------------------------------------
+# 6. DOCKER
+# ------------------------------------------------------------
+docker-compose.override.yml
+
+# ------------------------------------------------------------
+# 7. OS (Windows / macOS / Linux)
+# ------------------------------------------------------------
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
