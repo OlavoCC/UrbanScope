@@ -2,5 +2,5 @@ namespace Api.Images.DTOs.Entry;
 
 public record EntryOccurrenceDataDTO
 {
-    public IFormFile Image {get; set;}
+    public required IFormFile Image {get; set;}
 }

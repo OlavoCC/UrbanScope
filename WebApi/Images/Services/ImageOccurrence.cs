@@ -9,13 +9,6 @@ public class ImageOccurrence
 {
     private readonly string url = "http://localhost:8000";
 
-    public async Task<ReturnOccurrenceDataDTO> CreateOccurrence(EntryOccurrenceDataDTO dto)
-    {
-        using var ms = new MemoryStream();
-        await dto.Image.CopyToAsync(ms);
-        return await CreateOccurrence(ms.ToArray(), dto.Image.ContentType, dto.Image.FileName);
-    }
-
     public async Task<ReturnOccurrenceDataDTO> CreateOccurrence(byte[] imageBytes, string contentType, string fileName)
     {
         string dataUri = $"data:{contentType};base64,{Convert.ToBase64String(imageBytes)}";
