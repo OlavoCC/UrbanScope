@@ -7,6 +7,11 @@ using Api.WhatsApp.DTOs;
 using Api.WhatsApp.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
+using Api.Images.Context;
+using Api.Images.Models;
+using Npgsql.NameTranslation;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,8 +21,15 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<ImageOccurrence>();
 builder.Services.Configure<WhatsAppOptions>(
-    builder.Configuration.GetSection(WhatsAppOptions.SectionName));
+builder.Configuration.GetSection(WhatsAppOptions.SectionName));
 builder.Services.AddHttpClient<WhatsAppClient>();
+
+builder.Services.AddDbContext<UrbanScopeContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql => npgsql.MapEnum<NeighborhoodPriority>(
+            "priority", null, new NpgsqlNullNameTranslator()))
+    .LogTo(Console.WriteLine, LogLevel.Information));
 
 var app = builder.Build();
 
@@ -56,6 +68,12 @@ app.MapGet("/Api/WhatsApp/Webhook", (HttpRequest req, IOptions<WhatsAppOptions> 
         return Results.Text(challenge ?? "", "text/plain");
 
     return Results.StatusCode(StatusCodes.Status403Forbidden);
+});
+
+app.MapGet("/api/db/ping", async (UrbanScopeContext db) =>
+{
+    var total = await db.Complaints.CountAsync();
+    return Results.Ok(new { conectado = true, complaints = total });
 });
 
 // Recebimento de mensagens (imagem + localizacao)
