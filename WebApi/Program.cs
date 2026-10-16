@@ -14,6 +14,7 @@ using Api.Images.Models;
 using Npgsql.NameTranslation;
 using Api.Images.Data.Interfaces;
 using Images.Data.Services;
+using Microsoft.Extensions.Caching.Memory;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +28,7 @@ builder.Services.Configure<WhatsAppOptions>(
 builder.Configuration.GetSection(WhatsAppOptions.SectionName));
 builder.Services.AddHttpClient<WhatsAppClient>();
 builder.Services.AddScoped<IDbUser, DbUserService>();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddDbContext<UrbanScopeContext>(options =>
     options.UseNpgsql(
@@ -86,7 +88,9 @@ app.MapPost("/Api/WhatsApp/Webhook", async (
     IOptions<WhatsAppOptions> opt,
     WhatsAppClient whats,
     ImageOccurrence images,
-    IDbUser Iuser) =>
+    IDbUser Iuser,
+    IMemoryCache cache,
+    ILogger<Program> logger) =>
 {
     // Corpo cru -- necessario pra validar a assinatura da Meta
     using var ms = new MemoryStream();
@@ -103,39 +107,58 @@ app.MapPost("/Api/WhatsApp/Webhook", async (
     foreach (var change in entry.Changes ?? new())
     foreach (var message in change.Value?.Messages ?? new())
     {
-        switch (message.Type)
+        // Dedupe: a Meta reentrega a MESMA mensagem (falha anterior ou timeout
+        // do handler). O id da mensagem e unico, entao serve de chave.
+        if (cache.TryGetValue(message.Id, out _))
         {
-            case "image" when message.Image is not null:
-                var (bytes, contentType) = await whats.DownloadMediaAsync(message.Image.Id);
-                var occurrence = await images.CreateOccurrence(bytes, contentType, $"{message.Image.Id}.jpg");
-                Console.WriteLine($"[WhatsApp] Foto de {message.From} -> buraco: {occurrence.Have_hole} ({occurrence.Confidence:0.0}%)");
-                string phone = (message.From).ToString();
-                bool create = await Iuser.VerifyUserExistenceAsync(phone);
-                if(!create){
-                    Console.WriteLine("Usuario ainda nao cadastrado");
-                    var createUserDTO = new CreateUserDTO
-                    {
-                        phone = phone
-                    };
-                    bool result = await Iuser.CreateUserAsync(createUserDTO);
-                    if (result)
-                            {
-                                Console.WriteLine("Usuario criado com sucesso");
-                            }
+            logger.LogInformation("Mensagem {MessageId} ja processada; ignorando reentrega.", message.Id);
+            continue;
+        }
+        cache.Set(message.Id, true, TimeSpan.FromHours(1));
+
+        try
+        {
+            switch (message.Type)
+            {
+                case "image" when message.Image is not null:
+                    var (bytes, contentType) = await whats.DownloadMediaAsync(message.Image.Id);
+                    var occurrence = await images.CreateOccurrence(bytes, contentType, $"{message.Image.Id}.jpg");
+                    logger.LogInformation("[WhatsApp] Foto de {From} -> buraco: {HaveHole} ({Confidence:0.0}%)",
+                        message.From, occurrence.Have_hole, occurrence.Confidence);
+                    string phone = (message.From).ToString();
+                    bool create = await Iuser.VerifyUserExistenceAsync(phone);
+                    if(!create){
+                        logger.LogInformation("Usuario ainda nao cadastrado");
+                        var createUserDTO = new CreateUserDTO
+                        {
+                            phone = phone
+                        };
+                        bool result = await Iuser.CreateUserAsync(createUserDTO);
+                        if (result)
+                                {
+                                    logger.LogInformation("Usuario criado com sucesso");
+                                }
+                                else
+                                {
+                                    logger.LogInformation("Erro ao criar usuario");
+                                }
+                    }
                             else
                             {
-                                Console.WriteLine("Erro ao criar usuario");
+                                logger.LogInformation("Usuario ja cadastrado");
                             }
-                }
-                        else
-                        {
-                            Console.WriteLine("Usuario ja cadastrado");
-                        }
-                break;
-                
-            case "location" when message.Location is not null:
-                Console.WriteLine($"[WhatsApp] Localizacao de {message.From}: {message.Location.Latitude}, {message.Location.Longitude}");
-                break;
+                    break;
+
+                case "location" when message.Location is not null:
+                    logger.LogInformation("[WhatsApp] Localizacao de {From}: {Latitude}, {Longitude}",
+                        message.From, message.Location.Latitude, message.Location.Longitude);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Falha ao processar mensagem {MessageId} de {From} (tipo {Type}).",
+                message.Id, message.From, message.Type);
         }
     }
 
@@ -155,6 +178,8 @@ app.MapGet("/api/user/{phone}/info/", async (string phone, IDbUser Iuser) =>
         return Results.NotFound();
     }
 });
+
+
 
 
 
