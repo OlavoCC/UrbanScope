@@ -1,21 +1,24 @@
 using System.Text.Json;
-using Api.Images.DTOs.Entry;
-using Api.Images.DTOs.Return;
+using Api.Data.DTOs.Entry;
+using Api.Data.DTOs.Return;
 using Api.Images.Services;
-using Api.Images.Endpoints;
+using Api.Endpoints;
 using Api.WhatsApp.Config;
 using Api.WhatsApp.DTOs;
 using Api.WhatsApp.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Api.Images.DTOs.Intra;
+using Api.Data.DTOs.Intra;
 using Microsoft.EntityFrameworkCore;
-using Api.Images.Context;
-using Api.Images.Models;
+using Api.Data.DbContext;
+using Api.Data.Models;
 using Npgsql.NameTranslation;
-using Api.Images.Data.Interfaces;
-using Images.Data.Services;
+using Api.Users.Data.Interfaces;
+using Api.Users.Data.Services;
 using Microsoft.Extensions.Caching.Memory;
+using Api.Users.Services;
+using Api.Users.Interfaces;
+using Api.WhatsApp.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,11 +27,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<ImageOccurrence>();
+builder.Services.AddScoped<ImageOccurrenceService>();
+builder.Services.AddScoped<IDbUser, DbUserService>();
+builder.Services.AddScoped<IUser, UserService>();
+builder.Services.AddScoped<WhatsAppService>();
+
 builder.Services.Configure<WhatsAppOptions>(
 builder.Configuration.GetSection(WhatsAppOptions.SectionName));
 builder.Services.AddHttpClient<WhatsAppClient>();
-builder.Services.AddScoped<IDbUser, DbUserService>();
+
 builder.Services.AddMemoryCache();
 
 builder.Services.AddDbContext<UrbanScopeContext>(options =>
@@ -69,15 +76,7 @@ app.MapGet("/api/db/ping", async (UrbanScopeContext db) =>
 });
 
 
-app.MapGet("/test/", async (UrbanScopeContext db) =>
-{
-    var roles = await db.Roles.ToListAsync();
-    return Results.Ok(roles);
-});
-
 // Recebimento de mensagens (imagem + localizacao)
-
-
 app.MapUserEndpoints();
 app.MapWhatsAppEndpoints();
 

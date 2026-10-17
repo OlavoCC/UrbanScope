@@ -1,6 +1,8 @@
-namespace Api.Images.Endpoints;
-using Api.Images.Context;
-using Api.Images.Data.Interfaces;
+namespace Api.Endpoints;
+
+using Api.Data.DbContext;
+using Api.Users.Data.Interfaces;
+using Api.Users.Interfaces;
 
 public static class UserEndpoints
 {
@@ -9,15 +11,13 @@ public static class UserEndpoints
         var users = app.MapGroup("/api/users")
             .WithTags("Users");
 
-        users.MapGet("/{phone}/info", async (string phone, IDbUser user) =>
+        users.MapGet("/{phone}/info", async (string phone, IUser _user) =>
         {
-            var result = await user.GetInfoUserAsync(phone);
-
+            var result = await _user.GetUserInfoAsync(phone);
             if (result != null)
             {
                 return Results.Ok(result);
             }
-
             return Results.NotFound();
         });
     }
