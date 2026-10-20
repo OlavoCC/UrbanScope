@@ -37,5 +37,35 @@ public static class ComplaintEndpoints
             }
             return Results.NotFound();
         });
+
+        complaints.MapGet("/GetComplaintsById/{id}", async (Guid id, IOccurrence _occurrence) =>
+        {
+            var result = await _occurrence.GetComplaintsById(id);
+            if (result != null)
+            {
+                return Results.Ok(result);
+            }
+            return Results.NotFound();
+        });
+        
+        complaints.MapGet("/GetAllComplaintsByNeighborhood/{neighborhood}", async (string neighborhood, IOccurrence _occurrence) =>
+        {
+            var result = await _occurrence.GetAllComplaintsByNeighborhood(neighborhood);
+            if (result != null)
+            {
+                return Results.Ok(result);
+            }
+            return Results.NotFound();
+        });
+
+        complaints.MapGet("/GetAllComplaintsWithOldestTimeRange", async (IOccurrence _occurrence) =>
+        {
+            var result = await _occurrence.GetAllComplaintsWithOldsetTimeRange();
+            if (result != null)
+            {
+                return Results.Ok(result);
+            }
+            return Results.NotFound();
+        });
     }
 }

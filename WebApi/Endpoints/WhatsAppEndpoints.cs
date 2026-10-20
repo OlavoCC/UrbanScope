@@ -37,7 +37,7 @@ public static class WhatsAppEndpoints
         });
 
         // Handshake do webhook (a Meta chama isso pra validar a URL)
-        whats.MapGet("/Api/WhatsApp/Webhook", (HttpRequest req, IOptions<WhatsAppOptions> opt) =>
+        whats.MapGet("/Webhook", (HttpRequest req, IOptions<WhatsAppOptions> opt) =>
         {
             var mode = (string?)req.Query["hub.mode"];
             var token = (string?)req.Query["hub.verify_token"];
