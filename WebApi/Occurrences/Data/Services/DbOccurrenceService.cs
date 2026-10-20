@@ -195,4 +195,9 @@ public class DbOccurrenceService : IDbOccurrence
         };
     }
 
+    public async Task<bool> CreateOccurrenceIntermediumDb(string phone, byte[] imageBytes, string fileName)
+    {
+        return true;
+    }
+
 }

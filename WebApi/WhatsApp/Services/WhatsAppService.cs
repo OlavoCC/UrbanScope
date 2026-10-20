@@ -6,6 +6,7 @@ using Api.WhatsApp.DTOs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Api.Occurrences.Interfaces;
 
 namespace Api.WhatsApp.Services;
 
@@ -16,12 +17,14 @@ public class WhatsAppService
     private readonly WhatsAppClient _whats;
     private readonly ImageOccurrenceService _images;
     private readonly IDbUser _userDb;
+    private readonly IOccurrence _occurrenceService;
 
     public WhatsAppService(
         IMemoryCache cache,
         ILogger<WhatsAppService> logger,
         WhatsAppClient whats,
         ImageOccurrenceService images,
+        IOccurrence occurrenceService,
         IDbUser userDb)
     {
         _cache = cache;
@@ -29,6 +32,7 @@ public class WhatsAppService
         _whats = whats;
         _images = images;
         _userDb = userDb;
+        _occurrenceService = occurrenceService;
     }
 
     public async Task<bool> ReceiveImageAsync(WebhookTransporterDTO<string> dto)
@@ -64,20 +68,10 @@ public class WhatsAppService
                                     message.From, occurrence.Have_hole, occurrence.Confidence);
 
                                 var phone = message.From;
-                                var create = await _userDb.VerifyUserExistenceAsyncDb(phone);
-                                if (!create)
+                                var result = await _occurrenceService.CreateOccurrenceIntermedium(phone, bytes, $"{message.Image.Id}.jpg");
+                                if (result)
                                 {
-                                    _logger.LogInformation("Usuario ainda nao cadastrado");
-                                    var createUserDTO = new CreateUserDTO { phone = phone };
-                                    var result = await _userDb.CreateUserAsyncDb(createUserDTO);
-                                    if (result)
-                                        _logger.LogInformation("Usuario criado com sucesso");
-                                    else
-                                        _logger.LogInformation("Erro ao criar usuario");
-                                }
-                                else
-                                {
-                                    _logger.LogInformation("Usuario ja cadastrado");
+                                    _logger.LogInformation("[WhatsApp] Ocorrencia criada com sucesso para {From}.", message.From);
                                 }
                                 break;
 

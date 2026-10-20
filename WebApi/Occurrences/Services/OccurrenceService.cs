@@ -4,13 +4,24 @@ using Api.Occurrences.Interfaces;
 using Api.Data.DTOs.Return;
 using Api.Occurrences.Data.Interfaces;
 using Api.Data.DTOs.Intra;
+using Api.Users.Data.Interfaces;
+
+using System.Net.Http.Headers;
+using System.Runtime.Serialization;
+using Microsoft.AspNetCore.Http.Features;
+
 public class OccurrenceService : IOccurrence
 {
     private readonly IDbOccurrence _dbOccurrence;
-    public OccurrenceService(IDbOccurrence dbOccurrence)
+    private readonly IDbUser _userDb;
+    public OccurrenceService(IDbOccurrence dbOccurrence, IDbUser userDb)
     {
         _dbOccurrence = dbOccurrence;
+        _userDb = userDb;
     }
+
+
+
     public async Task<ReturrnTotalOccurrence> TotalOccurrences()
     {
         return await _dbOccurrence.TotalOccurrencesDb();
@@ -42,4 +53,18 @@ public class OccurrenceService : IOccurrence
         return await _dbOccurrence.GetAllComplaintsWithOldestTimeRangeDb(currentDateTime);
     }
 
+    public async Task<bool> CreateOccurrenceIntermedium(string phone, byte[] imageBytes, string fileName)
+    {
+        var create = await _userDb.VerifyUserExistenceAsyncDb(phone);
+        if (!create){
+            var createUserDTO = new CreateUserDTO { phone = phone };
+            var result = await _userDb.CreateUserAsyncDb(createUserDTO);
+            if (result)
+            {
+                
+            }
+            return true;
+        }
+        return true;
+    }
 }
