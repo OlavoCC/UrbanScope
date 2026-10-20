@@ -33,18 +33,43 @@ public class WhatsAppClient
         var meta = await metaResp.Content.ReadFromJsonAsync<MediaMeta>(cancellationToken: ct)
                    ?? throw new InvalidOperationException("Resposta de midia invalida.");
 
-        using var fileReq = new HttpRequestMessage(HttpMethod.Get, meta.Url);
-        fileReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.AccessToken);
+        const int maxAttempts = 3;
 
-        using var fileResp = await _http.SendAsync(fileReq, ct);
-        fileResp.EnsureSuccessStatusCode();
+        for (var attempt = 1; ; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                using var fileReq = new HttpRequestMessage(HttpMethod.Get, meta.Url);
+                fileReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.AccessToken);
 
-        var contentType = fileResp.Content.Headers.ContentType?.MediaType
-                          ?? meta.MimeType ?? "image/jpeg";
-        var bytes = await fileResp.Content.ReadAsByteArrayAsync(ct);
+                using var fileResp = await _http.SendAsync(fileReq, ct);
+                fileResp.EnsureSuccessStatusCode();
 
-        return (bytes, contentType);
+                var contentType = fileResp.Content.Headers.ContentType?.MediaType
+                                  ?? meta.MimeType ?? "image/jpeg";
+                var bytes = await fileResp.Content.ReadAsByteArrayAsync(ct);
+
+                return (bytes, contentType);
+            }
+            catch (Exception ex) when (attempt < maxAttempts && IsTransient(ex, ct))
+            {
+                Console.WriteLine($"[WhatsApp] Download da midia falhou (tentativa {attempt}/{maxAttempts}): {ex.Message}");
+                await Task.Delay(TimeSpan.FromMilliseconds(400 * attempt), ct);
+            }
+        }
     }
+
+    // Transitorio = vale retentar. 4xx (token expirado, midia inexistente) NAO retenta.
+    private static bool IsTransient(Exception ex, CancellationToken ct) => ex switch
+    {
+        HttpRequestException { StatusCode: null } => true,               // rede/TLS (o nosso caso)
+        HttpRequestException { StatusCode: { } s } =>
+            (int)s >= 500 || (int)s == 408 || (int)s == 429,             // 5xx + timeout + rate limit
+        IOException => true,
+        TaskCanceledException => !ct.IsCancellationRequested,            // timeout do HttpClient, NAO cancelamento
+        _ => false
+    };
 
     private record MediaMeta(
         [property: JsonPropertyName("url")] string Url,

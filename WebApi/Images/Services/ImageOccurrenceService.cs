@@ -1,11 +1,11 @@
 namespace Api.Images.Services;
 
-using Api.Images.DTOs.Entry;
-using Api.Images.DTOs.Return;
-using Api.Images.DTOs.FastApiResponse;
+using Api.Data.DTOs.Entry;
+using Api.Data.DTOs.Return;
+using Api.Data.DTOs.FastApiResponse;
 using System.Net.Http.Headers;
 
-public class ImageOccurrence
+public class ImageOccurrenceService
 {
     private readonly string url = "http://localhost:8000";
 
