@@ -11,4 +11,5 @@ public interface IOccurrence
     Task<ComplaintsReturnDTO> GetComplaintsById(Guid id);
     Task<ComplaintsReturnByNeighborhoodDTO> GetAllComplaintsByNeighborhood(string neighborhood);
     Task<ComplaintsReturnByNeighborhoodDTO> GetAllComplaintsWithOldsetTimeRange();
+    Task<bool> CreateOccurrenceIntermedium();
 }
