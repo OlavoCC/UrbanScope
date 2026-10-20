@@ -35,7 +35,7 @@ public class WhatsAppService
     {
         var envelope = JsonSerializer.Deserialize<WebhookEnvelope>(dto.RawBody);
         if (envelope?.Entry is null)
-            return Results.Ok();
+            return true;
 
         foreach (var entry in envelope.Entry)
         {
@@ -96,6 +96,6 @@ public class WhatsAppService
             }
         }
 
-        return Results.Ok();
+        return true ;
     }
 }

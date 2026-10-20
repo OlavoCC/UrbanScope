@@ -1,14 +1,10 @@
 namespace Api.Endpoints;
-using System.Text.Json;
-using Api.Images.Services;
+
 using Api.WhatsApp.Config;
-using Api.WhatsApp.DTOs;
 using Api.WhatsApp.Services;
 using Microsoft.Extensions.Options;
 using Api.Data.DTOs.Intra;
-using Api.Users.Data.Interfaces;
-using Microsoft.Extensions.Caching.Memory;
-using Api.WhatsApp.Services;
+
 
 public static class WhatsAppEndpoints
 {
@@ -38,7 +34,7 @@ public static class WhatsAppEndpoints
                 else{
                     return Results.Problem();
                 }
-            });
+        });
 
         // Handshake do webhook (a Meta chama isso pra validar a URL)
         whats.MapGet("/Api/WhatsApp/Webhook", (HttpRequest req, IOptions<WhatsAppOptions> opt) =>

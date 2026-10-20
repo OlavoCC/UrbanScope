@@ -19,6 +19,10 @@ using Microsoft.Extensions.Caching.Memory;
 using Api.Users.Services;
 using Api.Users.Interfaces;
 using Api.WhatsApp.Services;
+using Api.Occurrences.Interfaces;
+using Api.Occurrences.Services;
+using Api.Occurrences.Data.Interfaces;
+using Api.Occurrences.Data.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +33,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<ImageOccurrenceService>();
 builder.Services.AddScoped<IDbUser, DbUserService>();
+builder.Services.AddScoped<IOccurrence, OccurrenceService>();
+builder.Services.AddScoped<IDbOccurrence, DbOccurrenceService>();
 builder.Services.AddScoped<IUser, UserService>();
 builder.Services.AddScoped<WhatsAppService>();
 
@@ -79,6 +85,7 @@ app.MapGet("/api/db/ping", async (UrbanScopeContext db) =>
 // Recebimento de mensagens (imagem + localizacao)
 app.MapUserEndpoints();
 app.MapWhatsAppEndpoints();
+app.MapComplaintEndpoints();
 
 
 
