@@ -2,6 +2,8 @@ namespace Api.Occurrences.Interfaces;
 
 using Api.Data.DTOs.Return;
 using Api.Data.DTOs.Intra;
+using System.Diagnostics.Eventing.Reader;
+using Api.Data.DTOs.Entry;
 
 public interface IOccurrence
 {
@@ -14,4 +16,5 @@ public interface IOccurrence
     Task<bool> CreateOccurrenceIntermedium(string phone, byte[] imageBytes, string fileName);
     Task<bool> CreateNeighborhood(double latitude, double longitude);
     Task<bool> CreateComplaint(double lat, double lon, string phone);
+    Task<bool> EditComplaint(EditComplaintDTO dto);
 }

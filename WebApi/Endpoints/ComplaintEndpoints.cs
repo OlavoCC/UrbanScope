@@ -1,6 +1,10 @@
 namespace Api.Endpoints;
 
+using System.Runtime.CompilerServices;
+using Api.Data.DTOs.Entry;
 using Api.Occurrences.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+
 public static class ComplaintEndpoints
 {
     public static void MapComplaintEndpoints(this IEndpointRouteBuilder app)
@@ -66,6 +70,16 @@ public static class ComplaintEndpoints
                 return Results.Ok(result);
             }
             return Results.NotFound();
+        });
+
+        complaints.MapPut("/EditComplaint", async ([FromBody] EditComplaintDTO dto, IOccurrence _occurrence) =>
+        {
+            var result = await _occurrence.EditComplaint(dto);
+            if (result)
+            {
+                return Results.Ok(result);
+            }
+            return Results.BadRequest();
         });
     }
 }

@@ -7,6 +7,7 @@ using System.Linq;
 using Api.Data.DbContext;
 using Api.Data.DTOs.Intra;
 using Api.Data.Models;
+using Api.Data.DTOs.Entry;
 
 public class DbOccurrenceService : IDbOccurrence
 {
@@ -316,6 +317,58 @@ public class DbOccurrenceService : IDbOccurrence
         };
 
         var complaintAdd = _context.Complaints.Add(complaintModel);
+        return await _context.SaveChangesAsync() > 0;
+    }
+
+    public async Task<bool> EditComplaintBd(EditComplaintDTO dto)
+    {
+        var complaint = await _context.Complaints
+            .FirstOrDefaultAsync(c => c.Id == dto.Id);
+
+        if (complaint == null)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(dto.problem))
+            complaint.problem = dto.problem;
+
+        if (!string.IsNullOrWhiteSpace(dto.street))
+            complaint.street = dto.street;
+
+        if (!string.IsNullOrWhiteSpace(dto.description))
+            complaint.description = dto.description;
+
+        if (!string.IsNullOrWhiteSpace(dto.status))
+        {
+            var statusId = await _context.ComplaintStatuses
+                .Where(s => s.status == dto.status)
+                .Select(s => (Guid?)s.Id)
+                .FirstOrDefaultAsync();
+            if (statusId != null)
+                complaint.id_complaint_status = statusId.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.neighborhood))
+        {
+            var neighborhoodId = await _context.Neighborhoods
+                .Where(n => n.neighborhood == dto.neighborhood)
+                .Select(n => (Guid?)n.Id)
+                .FirstOrDefaultAsync();
+
+            if (neighborhoodId == null)
+            {
+                var newNeighborhood = new NeighborhoodModel
+                {
+                    neighborhood = dto.neighborhood,
+                    priority = NeighborhoodPriority.BAIXA
+                };
+                _context.Neighborhoods.Add(newNeighborhood);
+                await _context.SaveChangesAsync();
+                neighborhoodId = newNeighborhood.Id;
+            }
+
+            complaint.id_neighborhood = neighborhoodId.Value;
+        }
+
         return await _context.SaveChangesAsync() > 0;
     }
 

@@ -7,7 +7,7 @@ using Api.Data.DTOs.Intra;
 using Api.Users.Data.Interfaces;
 using Api.Images.Services;
 using System.Text.Json;
-
+using Api.Data.DTOs.Entry;
 
 public class OccurrenceService : IOccurrence
 {
@@ -168,5 +168,10 @@ public class OccurrenceService : IOccurrence
             
         }
         return false;
+    }
+
+    public async Task<bool> EditComplaint(EditComplaintDTO dto)
+    {
+        return await _dbOccurrence.EditComplaintBd(dto);
     }
 }
