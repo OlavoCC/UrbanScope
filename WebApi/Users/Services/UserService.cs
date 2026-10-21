@@ -8,9 +8,9 @@ public class UserService : IUser
 {
     private readonly IDbUser _IUser;
 
-    public UserService(IDbUser Iuser)
+    public UserService(IDbUser iuser)
     {
-        Iuser = _IUser;
+        _IUser = iuser;
     }
     
     public async Task<ReturnUserInfoDTO> GetUserInfoAsync(string phone){

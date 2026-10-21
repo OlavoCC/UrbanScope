@@ -68,11 +68,16 @@ public class WhatsAppService
                                     message.From, occurrence.Have_hole, occurrence.Confidence);
 
                                 var phone = message.From;
-                                var result = await _occurrenceService.CreateOccurrenceIntermedium(phone, bytes, $"{message.Image.Id}.jpg");
+                                if(occurrence.Confidence > 40)
+                                {
+                                    var result = await _occurrenceService.CreateOccurrenceIntermedium(phone, bytes, $"{message.Image.Id}.jpg");
                                 if (result)
                                 {
                                     _logger.LogInformation("[WhatsApp] Ocorrencia criada com sucesso para {From}.", message.From);
                                 }
+                                }
+
+                                
                                 break;
 
                             case "location" when message.Location is not null:

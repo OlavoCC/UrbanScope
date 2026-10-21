@@ -70,22 +70,19 @@ public class OccurrenceService : IOccurrence
     public async Task<bool> CreateOccurrenceIntermedium(string phone, byte[] imageBytes, string fileName)
     {
         var create = await _userDb.VerifyUserExistenceAsyncDb(phone);
-        if (!create){
+        if (!create)
+        {
             var createUserDTO = new CreateUserDTO { phone = phone };
             var result = await _userDb.CreateUserAsyncDb(createUserDTO);
-            if (result)
+            if (!result)
             {
-                var uploadImage = await _cloudinary.UploadImagemAsync(imageBytes, fileName);
-                var complaintImageAdd = await _dbOccurrence.CreateOccurrenceIntermediumDb(phone, uploadImage);
-                if (complaintImageAdd)
-                {
-                    return true;
-
-                }
+                return false;
             }
-            return false;
         }
-        return true;
+
+        var uploadImage = await _cloudinary.UploadImagemAsync(imageBytes, fileName);
+        var complaintImageAdd = await _dbOccurrence.CreateOccurrenceIntermediumDb(phone, uploadImage);
+        return complaintImageAdd;
     }
 
     public async Task<bool> CreateNeighborhood(double latitude, double longitude){
@@ -96,13 +93,16 @@ public class OccurrenceService : IOccurrence
         {
             var address = result.Value.GetProperty("address");
 
-            var street = address.TryGetProperty("road", out var road)
-                ? road.GetString()
-                : null;
+            var neighborhood = address.TryGetProperty("neighbourhood", out var neighbourhood)
+                ? neighbourhood.GetString()
+                : address.TryGetProperty("suburb", out var suburb)
+                    ? suburb.GetString()
+                    : address.TryGetProperty("quarter", out var quarter)
+                        ? quarter.GetString()
+                        : address.TryGetProperty("city_district", out var cityDistrict)
+                            ? cityDistrict.GetString()
+                            : "Não identificado";
 
-            var neighborhood = address.TryGetProperty("suburb", out var suburb)
-                ? suburb.GetString()
-                : null;
             bool createNeighborhood = await _dbOccurrence.CreateNeighborhoodDb(neighborhood);
             if (createNeighborhood)
             {
@@ -135,13 +135,29 @@ public class OccurrenceService : IOccurrence
             }
             _logger.LogInformation("============================");
 
-            var streetFromAdress = address.TryGetProperty("road", out var road)
-                ? road.GetString()
-                : null;
+            var streetFromAdress = address.TryGetProperty("name", out var name)
+                ? name.GetString()
+                : address.TryGetProperty("road", out var road)
+                    ? road.GetString()
+                    : address.TryGetProperty("street", out var street)
+                        ? street.GetString()
+                        : address.TryGetProperty("pedestrian", out var pedestrian)
+                            ? pedestrian.GetString()
+                            : address.TryGetProperty("footway", out var footway)
+                                ? footway.GetString()
+                                : address.TryGetProperty("path", out var path)
+                                    ? path.GetString()
+                                    : "Não informado (localização compartilhada)";
 
-            var neighborhoodFromAdress = address.TryGetProperty("suburb", out var suburb)
-                ? suburb.GetString()
-                : null;
+            var neighborhoodFromAdress = address.TryGetProperty("neighbourhood", out var neighbourhood)
+                ? neighbourhood.GetString()
+                : address.TryGetProperty("suburb", out var suburb)
+                    ? suburb.GetString()
+                    : address.TryGetProperty("quarter", out var quarter)
+                        ? quarter.GetString()
+                        : address.TryGetProperty("city_district", out var cityDistrict)
+                            ? cityDistrict.GetString()
+                            : "Não identificado";
 
             var createComplaint = await _dbOccurrence.CreateComplaintDb(phone, neighborhoodFromAdress, streetFromAdress, lat, lon);
             if (createComplaint)

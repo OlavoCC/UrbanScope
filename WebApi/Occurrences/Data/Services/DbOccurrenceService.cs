@@ -18,9 +18,18 @@ public class DbOccurrenceService : IDbOccurrence
     }
     public async Task<ReturrnTotalOccurrence> TotalOccurrencesDb()
     {
-        int TotalPending = await _context.ComplaintStatuses.CountAsync(o => o.status == "PENDENTE");
-        int TotalInProgress = await _context.ComplaintStatuses.CountAsync(o => o.status == "EM ANDAMENTO");
-        int TotalCompleted = await _context.ComplaintStatuses.CountAsync(o => o.status == "CONCLUIDO");
+        var statusCounts = await _context.Complaints
+            .Join(_context.ComplaintStatuses,
+                c => c.id_complaint_status,
+                s => s.Id,
+                (c, s) => s.status)
+            .GroupBy(status => status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        int TotalPending = statusCounts.FirstOrDefault(x => x.Status == "PENDENTE")?.Count ?? 0;
+        int TotalInProgress = statusCounts.FirstOrDefault(x => x.Status == "EM ANDAMENTO")?.Count ?? 0;
+        int TotalCompleted = statusCounts.FirstOrDefault(x => x.Status == "CONCLUIDO")?.Count ?? 0;
 
         return new ReturrnTotalOccurrence
         {
@@ -28,8 +37,6 @@ public class DbOccurrenceService : IDbOccurrence
             TotalProgress = TotalInProgress,
             TotalComplet = TotalCompleted
         };
-
-
     }
     
     public async Task<ComplaintByNeighborhoodWithTotalListDTO> GetComplaintsByNeighborhoodWithTotalDb()
@@ -76,14 +83,16 @@ public class DbOccurrenceService : IDbOccurrence
                 n => n.Id,
                 (x, n) => new { x.c, x.s, n })
             .Where(x => statuses.Contains(x.s.status))
-            .GroupBy(x => x.n.neighborhood)
+            .GroupBy(x => new { x.n.Id, x.n.neighborhood, x.n.priority })
             .Select(g => new ComplaintByNeighborhoodDTO
             {
-                Neighborhood = g.Key,
+                id = g.Key.Id,
+                Neighborhood = g.Key.neighborhood,
+                priority = g.Key.priority.ToString(),
                 Total = g.Count()
             })
-            .OrderByDescending(x => x.Total)   // maior quantidade primeiro
-            .ThenBy(x => x.Neighborhood)       // desempate A → Z
+            .OrderByDescending(x => x.Total)
+            .ThenBy(x => x.Neighborhood)
             .ToListAsync();
 
         return new ComplaintByNeighborhoodWithTotalListDTO
@@ -94,75 +103,83 @@ public class DbOccurrenceService : IDbOccurrence
 
     public async Task<ComplaintsReturnDTO> GetComplaintsByIdDb(Guid id)
     {
-        
-            var complaint = await _context.Complaints
-        .Where(c => c.Id == id)
-        .Join(_context.ComplaintStatuses,
-            c => c.id_complaint_status,
-            s => s.Id,
-            (c, s) => new { c, s })
-        .Join(_context.Neighborhoods,
-            x => x.c.id_neighborhood,
-            n => n.Id,
-            (x, n) => new { x.c, x.s, n })
-        .Join(_context.Users,
-            x => x.c.id_user,
-            u => u.Id,
-            (x, u) => new { x.c, x.s, x.n, u })
-        .GroupJoin(_context.ComplaintImages,
-            x => x.c.Id,
-            img => img.id_complaint,
-            (x, imgs) => new { x.c, x.s, x.n, x.u, Images = imgs })
-        .Select(x => new ComplaintsReturnDTO
-        {
-            id = x.c.Id,
-            phone = x.u.phone,  // Now comes from Users table
-            problem = x.c.problem,
-            status = x.s.status,
-            street = x.c.street,
-            neighborhood = x.n.neighborhood,
-            register_date = x.c.register_date,
-            description = x.c.description,
-            image_path = x.Images.FirstOrDefault() != null 
-                ? x.Images.First().image_path 
-                : string.Empty
-        })
-        .FirstOrDefaultAsync();
+        var complaint = await _context.Complaints
+            .Where(c => c.Id == id)
+            .Join(_context.ComplaintStatuses,
+                c => c.id_complaint_status,
+                s => s.Id,
+                (c, s) => new { c, s })
+            .Join(_context.Neighborhoods,
+                x => x.c.id_neighborhood,
+                n => n.Id,
+                (x, n) => new { x.c, x.s, n })
+            .Select(x => new
+            {
+                x.c,
+                x.s,
+                x.n,
+                User = _context.Users.Where(u => u.Id == x.c.id_user).FirstOrDefault(),
+                FirstImage = _context.ComplaintImages
+                    .Where(img => img.id_complaint == x.c.Id)
+                    .OrderBy(img => img.Id)
+                    .Select(img => img.image_path)
+                    .FirstOrDefault()
+            })
+            .Select(x => new ComplaintsReturnDTO
+            {
+                id = x.c.Id,
+                phone = x.User != null ? x.User.phone : string.Empty,
+                problem = x.c.problem,
+                status = x.s.status,
+                street = x.c.street,
+                neighborhood = x.n.neighborhood,
+                register_date = x.c.register_date,
+                description = x.c.description ?? string.Empty,
+                image_path = x.FirstImage ?? string.Empty
+            })
+            .FirstOrDefaultAsync();
 
-    return complaint;
+        return complaint;
     }
     public async Task<ComplaintsReturnByNeighborhoodDTO> GetAllComplaintsByNeighborhoodDb(string neighborhood)
     {
-            var complaints = await _context.Complaints
-    .Join(_context.ComplaintStatuses,
-        c => c.id_complaint_status,
-        s => s.Id,
-        (c, s) => new { c, s })
-    .Join(_context.Neighborhoods,
-        x => x.c.id_neighborhood,
-        n => n.Id,
-        (x, n) => new { x.c, x.s, n })
-    .Where(x => x.n.neighborhood == neighborhood)
-    .GroupJoin(_context.ComplaintImages,
-        x => x.c.Id,
-        img => img.id_complaint,
-        (x, imgs) => new { x.c, x.s, x.n, Images = imgs })
-    .Select(x => new NeighborhoodReturnDTO
-    {
-        id = x.n.Id,
-        problem = x.c.problem,
-        priority = x.n.priority.ToString(),
-        status = x.s.status,
-        street = x.c.street,
-        neighborhood = x.n.neighborhood,
-        register_date = x.c.register_date,
-        description = x.c.description ?? string.Empty,
-        image_path = x.Images.Any() ? x.Images.First().image_path : string.Empty
-    })
-    .ToListAsync();
+        var neighborhoodEntity = await _context.Neighborhoods
+            .Where(n => n.neighborhood == neighborhood)
+            .Select(n => new { n.Id, n.priority })
+            .FirstOrDefaultAsync();
+
+        var complaints = await _context.Complaints
+            .Join(_context.ComplaintStatuses,
+                c => c.id_complaint_status,
+                s => s.Id,
+                (c, s) => new { c, s })
+            .Join(_context.Neighborhoods,
+                x => x.c.id_neighborhood,
+                n => n.Id,
+                (x, n) => new { x.c, x.s, n })
+            .Where(x => x.n.neighborhood == neighborhood)
+            .GroupJoin(_context.ComplaintImages,
+                x => x.c.Id,
+                img => img.id_complaint,
+                (x, imgs) => new { x.c, x.s, x.n, Images = imgs })
+            .Select(x => new NeighborhoodReturnDTO
+            {
+                id = x.c.Id,
+                problem = x.c.problem,
+                priority = x.n.priority.ToString(),
+                status = x.s.status,
+                street = x.c.street,
+                neighborhood = x.n.neighborhood,
+                register_date = x.c.register_date,
+                description = x.c.description ?? string.Empty,
+                image_path = x.Images.Any() ? x.Images.First().image_path : string.Empty
+            })
+            .ToListAsync();
 
         return new ComplaintsReturnByNeighborhoodDTO
         {
+            NeighborhoodId = neighborhoodEntity?.Id ?? Guid.Empty,
+            Priority = neighborhoodEntity?.priority.ToString() ?? string.Empty,
             ComplaintsByNeighborhood = complaints
         };
     }
