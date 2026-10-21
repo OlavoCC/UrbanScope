@@ -1,29 +1,22 @@
-using System.Text.Json;
-
-using Api.Data.DTOs.Entry;
-using Api.Data.DTOs.Return;
-
 using Api.Images.Services;
 using Api.Endpoints;
 using Api.WhatsApp.Config;
-using Api.WhatsApp.DTOs;
 using Api.WhatsApp.Services;
-using Microsoft.Extensions.Options;
-using Api.Data.DTOs.Intra;
 using Microsoft.EntityFrameworkCore;
 using Api.Data.DbContext;
 using Api.Data.Models;
 using Npgsql.NameTranslation;
 using Api.Users.Data.Interfaces;
 using Api.Users.Data.Services;
-using Microsoft.Extensions.Caching.Memory;
 using Api.Users.Services;
 using Api.Users.Interfaces;
-using Api.WhatsApp.Services;
 using Api.Occurrences.Interfaces;
 using Api.Occurrences.Services;
 using Api.Occurrences.Data.Interfaces;
 using Api.Occurrences.Data.Services;
+using CloudinaryDotNet;
+using Microsoft.Extensions.Options;
+using Api.Data.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +42,21 @@ builder.Services.AddDbContext<UrbanScopeContext>(options =>
         npgsql => npgsql.MapEnum<NeighborhoodPriority>(
             "priority", null, new NpgsqlNullNameTranslator()))
     .LogTo(Console.WriteLine, LogLevel.Information));
+
+builder.Services.Configure<CloudinarySettings>(
+    builder.Configuration.GetSection("Cloudinary"));
+var settings = builder.Configuration
+    .GetSection("Cloudinary")
+    .Get<CloudinarySettings>();
+var account = new Account(
+    settings!.CloudName,
+    settings.ApiKey,
+    settings.ApiSecret
+);
+var cloudinary = new Cloudinary(account);
+builder.Services.AddSingleton(cloudinary);
+builder.Services.AddScoped<CloudinaryService>();
+
 
 var app = builder.Build();
 

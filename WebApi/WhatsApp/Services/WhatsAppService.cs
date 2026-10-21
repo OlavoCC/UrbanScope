@@ -78,6 +78,17 @@ public class WhatsAppService
                             case "location" when message.Location is not null:
                                 _logger.LogInformation("[WhatsApp] Localizacao de {From}: {Latitude}, {Longitude}",
                                     message.From, message.Location.Latitude, message.Location.Longitude);
+                                var CreateNeighborhood = await _occurrenceService.CreateNeighborhood(message.Location.Latitude, message.Location.Longitude);
+                                if (!CreateNeighborhood)
+                                {
+                                    _logger.LogInformation("[API] Erro ao criar o barrio");
+                                }
+                                var CreateComplaint = await _occurrenceService.CreateComplaint(message.Location.Latitude, message.Location.Longitude, message.From);
+                                if (!CreateComplaint)
+                                {
+                                   _logger.LogInformation("[API] Erro ao criar ocorrencia"); 
+                                }
+                                
                                 break;
                         }
                     }
@@ -85,6 +96,7 @@ public class WhatsAppService
                     {
                         _logger.LogError(ex, "Falha ao processar mensagem {MessageId} de {From} (tipo {Type}).",
                             message.Id, message.From, message.Type);
+                        
                     }
                 }
             }

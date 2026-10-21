@@ -12,4 +12,6 @@ public interface IOccurrence
     Task<ComplaintsReturnByNeighborhoodDTO> GetAllComplaintsByNeighborhood(string neighborhood);
     Task<ComplaintsReturnByNeighborhoodDTO> GetAllComplaintsWithOldsetTimeRange();
     Task<bool> CreateOccurrenceIntermedium(string phone, byte[] imageBytes, string fileName);
+    Task<bool> CreateNeighborhood(double latitude, double longitude);
+    Task<bool> CreateComplaint(double lat, double lon, string phone);
 }

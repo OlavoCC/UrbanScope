@@ -10,5 +10,7 @@ public interface IDbOccurrence
     Task<ComplaintsReturnDTO> GetComplaintsByIdDb(Guid Id);
     Task<ComplaintsReturnByNeighborhoodDTO> GetAllComplaintsByNeighborhoodDb(string neighborhood);
     Task<ComplaintsReturnByNeighborhoodDTO> GetAllComplaintsWithOldestTimeRangeDb(DateTime CurrentDay);
-    Task<bool> CreateOccurrenceIntermediumDb(string phone, byte[] imageBytes, string fileName);
+    Task<bool> CreateOccurrenceIntermediumDb(string phone, string url);
+    Task<bool> CreateNeighborhoodDb(string neighborhood);
+    Task<bool> CreateComplaintDb(string phone, string neighborhood, string street, double lat, double lon);
 }

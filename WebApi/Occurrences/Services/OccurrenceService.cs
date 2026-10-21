@@ -5,22 +5,34 @@ using Api.Data.DTOs.Return;
 using Api.Occurrences.Data.Interfaces;
 using Api.Data.DTOs.Intra;
 using Api.Users.Data.Interfaces;
+using Api.Images.Services;
+using System.Text.Json;
 
-using System.Net.Http.Headers;
-using System.Runtime.Serialization;
-using Microsoft.AspNetCore.Http.Features;
 
 public class OccurrenceService : IOccurrence
 {
+    private readonly CloudinaryService _cloudinary;
     private readonly IDbOccurrence _dbOccurrence;
     private readonly IDbUser _userDb;
-    public OccurrenceService(IDbOccurrence dbOccurrence, IDbUser userDb)
+    public OccurrenceService(IDbOccurrence dbOccurrence, IDbUser userDb, CloudinaryService cloudinary)
     {
         _dbOccurrence = dbOccurrence;
         _userDb = userDb;
+        _cloudinary = cloudinary;
     }
 
+    public async Task<JsonElement?> GetAddressAsync(double lat, double lon)
+    {
+        using var client = new HttpClient();
+        var url = $"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={lat.ToString(System.Globalization.CultureInfo.InvariantCulture)}&lon={lon.ToString(System.Globalization.CultureInfo.InvariantCulture)}&addressdetails=1";
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("UrbanScope/1.0");
+        var response = await client.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
+            return null;
 
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return json;
+    }
 
     public async Task<ReturrnTotalOccurrence> TotalOccurrences()
     {
@@ -61,10 +73,75 @@ public class OccurrenceService : IOccurrence
             var result = await _userDb.CreateUserAsyncDb(createUserDTO);
             if (result)
             {
-                
+                var uploadImage = await _cloudinary.UploadImagemAsync(imageBytes, fileName);
+                var complaintImageAdd = await _dbOccurrence.CreateOccurrenceIntermediumDb(phone, uploadImage);
+                if (complaintImageAdd)
+                {
+                    return true;
+
+                }
             }
-            return true;
+            return false;
         }
         return true;
+    }
+
+    public async Task<bool> CreateNeighborhood(double latitude, double longitude){
+
+        var result = await GetAddressAsync(latitude, longitude);
+
+        if (result is not null)
+        {
+            var address = result.Value.GetProperty("address");
+
+            var street = address.TryGetProperty("road", out var road)
+                ? road.GetString()
+                : null;
+
+            var neighborhood = address.TryGetProperty("suburb", out var suburb)
+                ? suburb.GetString()
+                : null;
+            bool createNeighborhood = await _dbOccurrence.CreateNeighborhoodDb(neighborhood);
+            if (createNeighborhood)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public async Task<bool> CreateComplaint(double lat, double lon, string phone)
+    {
+        var create = await _userDb.VerifyUserExistenceAsyncDb(phone);
+
+        if (!create)
+        {
+            var createUserDTO = new CreateUserDTO { phone = phone };
+            await _userDb.CreateUserAsyncDb(createUserDTO);
+        }
+        var result = await GetAddressAsync(lat, lon);
+
+        if (result is not null)
+        {
+            var address = result.Value.GetProperty("address");
+
+            var streetFromAdress = address.TryGetProperty("road", out var road)
+                ? road.GetString()
+                : null;
+
+            var neighborhoodFromAdress = address.TryGetProperty("suburb", out var suburb)
+                ? suburb.GetString()
+                : null;
+
+            var createComplaint = await _dbOccurrence.CreateComplaintDb(phone, neighborhoodFromAdress, streetFromAdress, lat, lon);
+            if (createComplaint)
+            {
+                return true;
+            }
+            return false;
+            
+        }
+        return false;
     }
 }
