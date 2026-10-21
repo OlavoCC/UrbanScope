@@ -24,6 +24,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Add CORS policy to allow Angular frontend
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 builder.Services.AddScoped<ImageOccurrenceService>();
 builder.Services.AddScoped<IDbUser, DbUserService>();
 builder.Services.AddScoped<IOccurrence, OccurrenceService>();
@@ -70,6 +82,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Enable CORS
+app.UseCors("AllowAngularApp");
 
 // Em dev, sem redirect: o ngrok precisa postar em HTTP
 if (!app.Environment.IsDevelopment())
