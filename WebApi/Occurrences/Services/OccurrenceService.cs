@@ -14,11 +14,13 @@ public class OccurrenceService : IOccurrence
     private readonly CloudinaryService _cloudinary;
     private readonly IDbOccurrence _dbOccurrence;
     private readonly IDbUser _userDb;
-    public OccurrenceService(IDbOccurrence dbOccurrence, IDbUser userDb, CloudinaryService cloudinary)
+    private readonly ILogger<OccurrenceService> _logger;
+    public OccurrenceService(IDbOccurrence dbOccurrence, IDbUser userDb, CloudinaryService cloudinary, ILogger<OccurrenceService> logger)
     {
         _dbOccurrence = dbOccurrence;
         _userDb = userDb;
         _cloudinary = cloudinary;
+        _logger = logger;
     }
 
     public async Task<JsonElement?> GetAddressAsync(double lat, double lon)
@@ -125,6 +127,13 @@ public class OccurrenceService : IOccurrence
         if (result is not null)
         {
             var address = result.Value.GetProperty("address");
+
+            _logger.LogInformation("=== DEBUG ADDRESS JSON ===");
+            foreach (var prop in address.EnumerateObject())
+            {
+                _logger.LogInformation("  {Name} = {Value}", prop.Name, prop.Value);
+            }
+            _logger.LogInformation("============================");
 
             var streetFromAdress = address.TryGetProperty("road", out var road)
                 ? road.GetString()

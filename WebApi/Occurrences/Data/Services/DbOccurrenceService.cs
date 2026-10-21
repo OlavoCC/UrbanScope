@@ -46,10 +46,12 @@ public class DbOccurrenceService : IDbOccurrence
                 n => n.Id,
                 (x, n) => new { x.c, x.s, n })
             .Where(x => statuses.Contains(x.s.status))
-            .GroupBy(x => x.n.neighborhood)
+            .GroupBy(x => new { x.n.Id, x.n.neighborhood, x.n.priority })
             .Select(g => new ComplaintByNeighborhoodDTO
             {
-                Neighborhood = g.Key,
+                id = g.Key.Id,
+                Neighborhood = g.Key.neighborhood,
+                priority = g.Key.priority.ToString(),
                 Total = g.Count()
             })
             .ToListAsync();
